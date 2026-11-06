@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Proveedores{% endblock %}
+{% block content %}
+<h3 class="mb-3">Proveedores</h3>
+<div class="row g-3">
+  <div class="col-lg-8"><div class="card"><div class="card-body">
+    <table class="table table-sm table-hover mb-0">
+      <thead><tr><th>Nombre</th><th>RFC</th><th>Email</th><th class="num">Gastos</th><th class="num">Total (sin cancelados)</th></tr></thead>
+      <tbody>
+      {% for p in proveedores %}
+        <tr><td>{{ p.nombre }}</td><td>{{ p.rfc or '-' }}</td><td>{{ p.email or '-' }}</td>
+          <td class="num">{{ p.n_gastos }}</td><td class="num">{{ p.total_cents|dinero }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div></div></div>
+  <div class="col-lg-4"><div class="card"><div class="card-body">
+    <h6>Nuevo proveedor</h6>
+    <form method="post">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <input name="nombre" class="form-control form-control-sm mb-2" placeholder="Nombre o razón social" required>
+      <input name="rfc" class="form-control form-control-sm mb-2" placeholder="RFC (opcional)" maxlength="13">
+      <input name="email" type="email" class="form-control form-control-sm mb-3" placeholder="Email (opcional)">
+      <button class="btn btn-sm btn-marca">Agregar</button>
+    </form>
+  </div></div></div>
+</div>
+{% endblock %}

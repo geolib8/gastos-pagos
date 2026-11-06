@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badge, form_post, modal_cancelar with context %}
+{% block title %}{{ pago.folio }}{% endblock %}
+{% block content %}
+{% set es_admin = g.usuario.rol == 'admin' %}
+<div class="d-flex flex-wrap gap-2 justify-content-between align-items-start mb-3">
+  <div>
+    <a href="{{ url_for('main.pagos') }}" class="small text-decoration-none">&larr; Pagos</a>
+    <h3 class="mb-0">{{ pago.folio }} <span class="fs-6 align-middle">{{ badge(pago.estatus) }}</span></h3>
+    <div class="text-muted">Gasto <a href="{{ url_for('main.gasto_detalle', gasto_id=pago.gasto_id) }}">{{ pago.gasto_folio }}</a> · {{ pago.gasto_desc }}</div>
+  </div>
+  {% if es_admin %}
+  <div class="d-flex flex-wrap gap-2">
+    {% if pago.estatus == 'PENDIENTE' %}
+      {{ form_post(url_for('main.pago_aprobar', pago_id=pago.id), 'Aprobar', 'success', 'check2-circle') }}
+    {% endif %}
+    {% if pago.estatus == 'APROBADO' %}
+      {{ form_post(url_for('main.pago_efectuar', pago_id=pago.id), 'Efectuar pago', 'marca', 'send-check',
+                   confirmar='Se descontará ' ~ (pago.monto_cents|dinero) ~ ' de la cuenta ' ~ pago.cuenta ~ '. ¿Continuar?') }}
+    {% endif %}
+    {% if pago.estatus in ('PENDIENTE', 'APROBADO') %}
+      <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#mCancelar"><i class="bi bi-x-circle"></i> Cancelar</button>
+    {% endif %}
+  </div>
+  {% elif pago.estatus in ('PENDIENTE', 'APROBADO') %}
+  <div class="alert alert-light border small py-2 mb-0">Aprobar, efectuar o cancelar requiere un usuario admin.</div>
+  {% endif %}
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-7"><div class="card"><div class="card-body">
+    <div class="row text-center kpi mb-3">
+      <div class="col"><div class="etiqueta">Monto del pago</div><div class="valor">{{ pago.monto_cents|dinero }}</div></div>
+      <div class="col"><div class="etiqueta">Saldo actual de la cuenta</div>
+        <div class="valor {{ 'text-danger' if cuenta.saldo_cents < pago.monto_cents and pago.estatus != 'PAGADO' }}">{{ cuenta.saldo_cents|dinero }}</div></div>
+    </div>
+    {% if pago.estatus == 'APROBADO' and cuenta.saldo_cents < pago.monto_cents %}
+      <div class="alert alert-danger small py-2">La cuenta no tiene saldo suficiente; el pago no se podrá efectuar hasta que se deposite.</div>
+    {% endif %}
+    <dl class="row small mb-0">
+      <dt class="col-4">Proveedor</dt><dd class="col-8">{{ pago.proveedor }}</dd>
+      <dt class="col-4">Cuenta</dt><dd class="col-8"><a href="{{ url_for('main.cuenta_detalle', cuenta_id=pago.cuenta_id) }}">{{ pago.cuenta }} · {{ pago.banco }}</a></dd>
+      <dt class="col-4">Referencia</dt><dd class="col-8">{{ pago.referencia or '-' }}</dd>
+      <dt class="col-4">Creado</dt><dd class="col-8">{{ pago.creado_en }}</dd>
+      <dt class="col-4">Aprobado</dt><dd class="col-8">{{ pago.aprobado_en or '-' }}</dd>
+      <dt class="col-4">Pagado</dt><dd class="col-8">{{ pago.pagado_en or '-' }}</dd>
+      {% if pago.estatus == 'CANCELADO' %}<dt class="col-4">Motivo cancelación</dt><dd class="col-8">{{ pago.motivo_cancelacion }}</dd>{% endif %}
+    </dl>
+  </div></div></div>
+  <div class="col-lg-5"><div class="card"><div class="card-body">
+    <h6 class="text-muted">Historial</h6>
+    <ul class="timeline small mb-0">
+    {% for h in historial %}
+      <li><div class="fw-semibold">{{ (h.estatus_anterior ~ ' → ') if h.estatus_anterior }}{{ h.estatus_nuevo }}</div>
+        <div class="text-muted">{{ h.creado_en }} · {{ h.usuario }}</div>
+        {% if h.comentario %}<div>{{ h.comentario }}</div>{% endif %}</li>
+    {% endfor %}
+    </ul>
+  </div></div></div>
+</div>
+{{ modal_cancelar('mCancelar', url_for('main.pago_cancelar', pago_id=pago.id), 'Cancelar pago ' ~ pago.folio) }}
+{% endblock %}

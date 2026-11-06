@@ -1,0 +1,88 @@
+erDiagram
+    USUARIOS ||--o{ GASTOS : "registra / aprueba / cancela"
+    USUARIOS ||--o{ PAGOS : "genera / aprueba / efectúa"
+    USUARIOS ||--o{ MOVIMIENTOS : registra
+    USUARIOS ||--o{ HISTORIAL : "hace el cambio"
+    PROVEEDORES ||--o{ GASTOS : factura
+    CATEGORIAS ||--o{ GASTOS : clasifica
+    GASTOS ||--o{ PAGOS : "se paga con"
+    CUENTAS_BANCARIAS ||--o{ PAGOS : "se carga a"
+    CUENTAS_BANCARIAS ||--o{ MOVIMIENTOS : tiene
+    PAGOS |o--o| MOVIMIENTOS : "genera un cargo"
+
+    USUARIOS {
+        int id PK
+        text username UK
+        text nombre
+        text password_hash
+        text rol "admin | capturista"
+        int activo
+        text creado_en
+    }
+    PROVEEDORES {
+        int id PK
+        text nombre
+        text rfc UK
+        text email
+    }
+    CATEGORIAS {
+        int id PK
+        text nombre UK
+    }
+    GASTOS {
+        int id PK
+        text folio UK
+        int proveedor_id FK
+        int categoria_id FK
+        text descripcion
+        int monto_cents "monto > 0"
+        text fecha_gasto
+        text fecha_vencimiento
+        text estatus "PENDIENTE|APROBADO|PAGO_PARCIAL|PAGADO|CANCELADO"
+        int creado_por FK
+        int aprobado_por FK
+        int cancelado_por FK
+        text motivo_cancelacion
+    }
+    PAGOS {
+        int id PK
+        text folio UK
+        int gasto_id FK
+        int cuenta_id FK
+        int monto_cents "monto > 0"
+        text estatus "PENDIENTE|APROBADO|PAGADO|CANCELADO"
+        text token UK "evita duplicados"
+        text referencia
+        int creado_por FK
+        int aprobado_por FK
+        int pagado_por FK
+        text pagado_en
+    }
+    CUENTAS_BANCARIAS {
+        int id PK
+        text nombre
+        text banco
+        text numero UK
+        text moneda
+        int saldo_cents "saldo >= 0"
+        int activa
+    }
+    MOVIMIENTOS {
+        int id PK
+        int cuenta_id FK
+        text tipo "DEPOSITO | PAGO"
+        int monto_cents
+        int saldo_despues_cents
+        int pago_id FK,UK "un cargo por pago"
+        text descripcion
+        int creado_por FK
+    }
+    HISTORIAL {
+        int id PK
+        text entidad "gasto | pago"
+        int entidad_id
+        text estatus_anterior
+        text estatus_nuevo
+        int usuario_id FK
+        text comentario
+    }

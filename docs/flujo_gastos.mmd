@@ -1,0 +1,17 @@
+flowchart TD
+    classDef estado fill:#e8edf7,stroke:#24305e,color:#1a1a1a
+    classDef fin fill:#d9f0e3,stroke:#2e8b57,color:#1a1a1a
+    classDef cancel fill:#eeeeee,stroke:#888,color:#333
+    classDef decision fill:#fff4d6,stroke:#c79a00,color:#1a1a1a
+    A([Capturista registra gasto:<br/>proveedor, categoría, monto, fechas]) --> GP[Gasto PENDIENTE]:::estado
+    GP --> D1{Admin revisa}:::decision
+    D1 -- Cancela con motivo --> GC[Gasto CANCELADO<br/>estado final, no se reactiva]:::cancel
+    D1 -- Aprueba --> GA[Gasto APROBADO]:::estado
+    GA --> D2{Siguiente acción}:::decision
+    D2 -- "Cancelar (solo si no hay<br/>pagos efectuados)" --> GC
+    D2 -- Botón Generar pago --> P1[[Proceso de pagos]]
+    P1 --> D3{"¿Lo pagado cubre<br/>el monto del gasto?"}:::decision
+    D3 -- No --> GPP[Gasto PAGO_PARCIAL]:::estado
+    GPP -- Generar otro pago --> P1
+    D3 -- Sí --> GF([Gasto PAGADO]):::fin
+    GC --- N[/"Al cancelar, sus pagos pendientes<br/>o aprobados también se cancelan"/]:::cancel

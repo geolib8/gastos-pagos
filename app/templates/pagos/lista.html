@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badge, filtro with context %}
+{% block title %}Pagos{% endblock %}
+{% block content %}
+<h3 class="mb-3">Pagos</h3>
+<div class="card"><div class="card-body">
+  <div class="mb-3">{{ filtro(opciones, estatus, 'main.pagos') }}</div>
+  <div class="table-responsive"><table class="table table-hover table-sm">
+    <thead><tr><th>Folio</th><th>Gasto</th><th>Proveedor</th><th>Cuenta</th><th>Creado</th><th>Pagado</th>
+      <th class="num">Monto</th><th>Estatus</th></tr></thead>
+    <tbody>
+    {% for p in pagos %}
+      <tr onclick="location='{{ url_for('main.pago_detalle', pago_id=p.id) }}'" style="cursor:pointer">
+        <td class="fw-semibold">{{ p.folio }}</td><td>{{ p.gasto_folio }}</td><td>{{ p.proveedor }}</td>
+        <td>{{ p.cuenta }} ({{ p.banco }})</td><td>{{ p.creado_en[:10] }}</td><td>{{ (p.pagado_en or '-')[:10] }}</td>
+        <td class="num">{{ p.monto_cents|dinero }}</td><td>{{ badge(p.estatus) }}</td></tr>
+    {% else %}<tr><td colspan="8" class="text-muted">Sin resultados.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+  <div class="small text-muted">Los pagos se generan desde el detalle de un gasto aprobado.</div>
+</div></div>
+{% endblock %}

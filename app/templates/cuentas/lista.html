@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Cuentas bancarias{% endblock %}
+{% block content %}
+<h3 class="mb-3">Cuentas bancarias</h3>
+<div class="row g-3">
+  <div class="col-lg-8"><div class="card"><div class="card-body">
+    <div class="table-responsive"><table class="table table-hover table-sm mb-0">
+      <thead><tr><th>Cuenta</th><th>Banco</th><th>Número</th><th class="num">Saldo</th>
+        <th class="num">En pagos aprobados</th><th class="num">Disponible</th><th class="num">Movs.</th></tr></thead>
+      <tbody>
+      {% for c in cuentas %}
+        <tr onclick="location='{{ url_for('main.cuenta_detalle', cuenta_id=c.id) }}'" style="cursor:pointer">
+          <td class="fw-semibold">{{ c.nombre }}</td><td>{{ c.banco }}</td><td>****{{ c.numero[-4:] }}</td>
+          <td class="num">{{ c.saldo_cents|dinero }}</td><td class="num">{{ c.comprometido_cents|dinero }}</td>
+          <td class="num {{ 'text-danger' if c.saldo_cents < c.comprometido_cents }}">{{ (c.saldo_cents - c.comprometido_cents)|dinero }}</td>
+          <td class="num">{{ c.n_mov }}</td></tr>
+      {% endfor %}
+      </tbody>
+      <tfoot><tr class="fw-semibold"><td colspan="3">Total</td>
+        <td class="num">{{ cuentas|sum(attribute='saldo_cents')|dinero }}</td>
+        <td class="num">{{ cuentas|sum(attribute='comprometido_cents')|dinero }}</td><td></td><td></td></tr></tfoot>
+    </table></div>
+  </div></div></div>
+  {% if g.usuario.rol == 'admin' %}
+  <div class="col-lg-4"><div class="card"><div class="card-body">
+    <h6>Nueva cuenta</h6>
+    <form method="post">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <input name="nombre" class="form-control form-control-sm mb-2" placeholder="Nombre (ej. Operación)" required>
+      <input name="banco" class="form-control form-control-sm mb-2" placeholder="Banco" required>
+      <input name="numero" class="form-control form-control-sm mb-2" placeholder="Número de cuenta / CLABE" required>
+      <select name="moneda" class="form-select form-select-sm mb-3"><option>MXN</option><option>USD</option></select>
+      <button class="btn btn-sm btn-marca">Crear</button>
+    </form>
+    <div class="form-text">El saldo inicia en cero; se fondea con un depósito desde el detalle.</div>
+  </div></div></div>
+  {% endif %}
+</div>
+{% endblock %}

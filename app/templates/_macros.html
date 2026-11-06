@@ -1,0 +1,43 @@
+{% macro badge(estatus) -%}
+  {%- set c = {'PENDIENTE':'warning text-dark','APROBADO':'primary','PAGO_PARCIAL':'info text-dark',
+               'PAGADO':'success','CANCELADO':'secondary'} -%}
+  <span class="badge bg-{{ c.get(estatus, 'light') }}">{{ estatus.replace('_', ' ') }}</span>
+{%- endmacro %}
+
+{% macro filtro(opciones, actual, endpoint) -%}
+<div class="btn-group btn-group-sm flex-wrap" role="group">
+  <a href="{{ url_for(endpoint) }}" class="btn btn-outline-secondary {{ 'active' if not actual }}">Todos</a>
+  {% for o in opciones %}
+  <a href="{{ url_for(endpoint, estatus=o) }}" class="btn btn-outline-secondary {{ 'active' if actual == o }}">{{ o.replace('_',' ').title() }}</a>
+  {% endfor %}
+</div>
+{%- endmacro %}
+
+{% macro form_post(action, label, clase='primary', icono='', confirmar=None, motivo=False) -%}
+<form method="post" action="{{ action }}" class="d-inline"{% if confirmar %} onsubmit="return confirm('{{ confirmar }}')"{% endif %}>
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  {% if motivo %}<input type="hidden" name="motivo" value="">{% endif %}
+  <button class="btn btn-{{ clase }}" type="submit">{% if icono %}<i class="bi bi-{{ icono }}"></i> {% endif %}{{ label }}</button>
+</form>
+{%- endmacro %}
+
+{% macro modal_cancelar(id, action, titulo) -%}
+<div class="modal fade" id="{{ id }}" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <form method="post" action="{{ action }}">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <div class="modal-header"><h5 class="modal-title">{{ titulo }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <p class="small text-muted mb-2">La cancelación es definitiva, no se puede reactivar.</p>
+        <label class="form-label">Motivo</label>
+        <textarea name="motivo" class="form-control" rows="2" required></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cerrar</button>
+        <button class="btn btn-danger">Cancelar definitivamente</button>
+      </div>
+    </form>
+  </div></div>
+</div>
+{%- endmacro %}

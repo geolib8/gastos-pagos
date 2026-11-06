@@ -1,0 +1,18 @@
+flowchart TD
+    classDef estado fill:#e8edf7,stroke:#24305e,color:#1a1a1a
+    classDef fin fill:#d9f0e3,stroke:#2e8b57,color:#1a1a1a
+    classDef cancel fill:#eeeeee,stroke:#888,color:#333
+    classDef decision fill:#fff4d6,stroke:#c79a00,color:#1a1a1a
+    B([Generar pago desde el gasto:<br/>cuenta, monto, referencia]) --> V1{"Validaciones<br/>• gasto aprobado<br/>• monto ≤ pendiente del gasto<br/>• monto ≤ saldo de la cuenta<br/>• token no usado"}:::decision
+    V1 -- Falla --> E1[Se rechaza con mensaje]:::cancel
+    V1 -- OK --> PP[Pago PENDIENTE]:::estado
+    PP --> D1{Admin revisa}:::decision
+    D1 -- Cancela --> PC[Pago CANCELADO<br/>libera el monto del gasto]:::cancel
+    D1 -- Aprueba --> PA[Pago APROBADO]:::estado
+    PA --> D2{Admin}:::decision
+    D2 -- Cancela --> PC
+    D2 -- Efectuar pago --> V2{"• saldo suficiente hoy<br/>• no efectuado antes"}:::decision
+    V2 -- Falla --> E2[Se rechaza: saldo insuficiente<br/>el pago sigue APROBADO]:::cancel
+    V2 -- OK --> PE[Pago PAGADO]:::fin
+    PE --> M[Cargo a la cuenta + registro<br/>en movimientos y historial]:::fin
+    M --> R([Se actualiza el estatus del gasto]):::fin

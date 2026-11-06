@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}API REST{% endblock %}
+{% block content %}
+<h3>API REST (GET)</h3>
+<p class="text-muted">Base: <code>{{ request.url_root }}api/v1</code> · Autenticación HTTP Basic con el mismo usuario y contraseña de la app. Respuestas en JSON; montos en pesos.</p>
+<pre class="code">curl -u admin:CONTRASEÑA {{ request.url_root }}api/v1/gastos?estatus=APROBADO</pre>
+<div class="card"><div class="card-body">
+<table class="table table-sm">
+  <thead><tr><th>Endpoint</th><th>Parámetros</th><th>Descripción</th><th></th></tr></thead>
+  <tbody>
+  {% for ep, params, desc in [
+      ('/api/v1/', '', 'Lista de endpoints disponibles'),
+      ('/api/v1/resumen', '', 'Totales de gastos y pagos por estatus y saldo total'),
+      ('/api/v1/gastos', 'estatus, proveedor_id, page, per_page', 'Gastos paginados'),
+      ('/api/v1/gastos/1', '', 'Un gasto con sus pagos e historial de estatus'),
+      ('/api/v1/pagos', 'estatus, gasto_id, cuenta_id, page, per_page', 'Pagos paginados'),
+      ('/api/v1/pagos/1', '', 'Un pago'),
+      ('/api/v1/cuentas', '', 'Cuentas bancarias con saldo'),
+      ('/api/v1/cuentas/1', '', 'Una cuenta'),
+      ('/api/v1/cuentas/1/movimientos', 'page, per_page', 'Depósitos y cargos de la cuenta'),
+      ('/api/v1/proveedores', '', 'Catálogo de proveedores'),
+      ('/api/v1/categorias', '', 'Catálogo de categorías')] %}
+    <tr><td><code>GET {{ ep }}</code></td><td class="small">{{ params or '-' }}</td><td class="small">{{ desc }}</td>
+      <td><a class="btn btn-sm btn-outline-secondary" href="{{ ep }}" target="_blank">Probar</a></td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p class="small text-muted mb-0">Errores: 401 sin credenciales, 400 parámetro inválido, 404 recurso no encontrado. Paginación: <code>page</code> (default 1), <code>per_page</code> (default 20, máx. 100).</p>
+</div></div>
+{% endblock %}

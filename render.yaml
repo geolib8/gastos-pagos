@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: gastos-pagos
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    # 1 worker para que SQLite no tenga escritores en procesos distintos
+    startCommand: gunicorn wsgi:app --workers 1 --threads 4 --bind 0.0.0.0:$PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: CAPTURISTA_PASSWORD
+        sync: false

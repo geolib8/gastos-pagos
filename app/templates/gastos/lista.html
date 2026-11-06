@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badge, filtro with context %}
+{% block title %}Gastos{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
+  <h3 class="mb-0">Gastos</h3>
+  <a href="{{ url_for('main.gasto_nuevo') }}" class="btn btn-marca"><i class="bi bi-plus-lg"></i> Nuevo gasto</a>
+</div>
+<div class="card"><div class="card-body">
+  <div class="d-flex flex-wrap gap-2 justify-content-between mb-3">
+    {{ filtro(opciones, estatus, 'main.gastos') }}
+    <form class="d-flex" method="get">
+      <input type="hidden" name="estatus" value="{{ estatus }}">
+      <input name="q" value="{{ q }}" class="form-control form-control-sm" placeholder="Buscar folio, proveedor...">
+    </form>
+  </div>
+  <div class="table-responsive"><table class="table table-hover table-sm">
+    <thead><tr><th>Folio</th><th>Fecha</th><th>Proveedor</th><th>Descripción</th><th>Categoría</th>
+      <th class="num">Monto</th><th class="num">Pagado</th><th>Estatus</th></tr></thead>
+    <tbody>
+    {% for g_ in gastos %}
+      <tr onclick="location='{{ url_for('main.gasto_detalle', gasto_id=g_.id) }}'" style="cursor:pointer">
+        <td class="fw-semibold">{{ g_.folio }}</td><td>{{ g_.fecha_gasto }}</td><td>{{ g_.proveedor }}</td>
+        <td>{{ g_.descripcion }}</td><td>{{ g_.categoria }}</td>
+        <td class="num">{{ g_.monto_cents|dinero }}</td><td class="num">{{ g_.pagado_cents|dinero }}</td>
+        <td>{{ badge(g_.estatus) }}</td></tr>
+    {% else %}<tr><td colspan="8" class="text-muted">Sin resultados.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+  <div class="small text-muted">{{ gastos|length }} gastos</div>
+</div></div>
+{% endblock %}

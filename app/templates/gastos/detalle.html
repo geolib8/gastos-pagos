@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badge, form_post, modal_cancelar with context %}
+{% block title %}{{ gasto.folio }}{% endblock %}
+{% block content %}
+{% set es_admin = g.usuario.rol == 'admin' %}
+<div class="d-flex flex-wrap gap-2 justify-content-between align-items-start mb-3">
+  <div>
+    <a href="{{ url_for('main.gastos') }}" class="small text-decoration-none">&larr; Gastos</a>
+    <h3 class="mb-0">{{ gasto.folio }} <span class="fs-6 align-middle">{{ badge(gasto.estatus) }}</span></h3>
+    <div class="text-muted">{{ gasto.descripcion }}</div>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    {% if gasto.estatus == 'PENDIENTE' and es_admin %}
+      {{ form_post(url_for('main.gasto_aprobar', gasto_id=gasto.id), 'Aprobar', 'success', 'check2-circle') }}
+    {% endif %}
+    {% if gasto.estatus in ('APROBADO', 'PAGO_PARCIAL') and pendiente > 0 %}
+      <button class="btn btn-marca" data-bs-toggle="modal" data-bs-target="#mPago"><i class="bi bi-cash-coin"></i> Generar pago</button>
+    {% endif %}
+    {% if gasto.estatus in ('PENDIENTE', 'APROBADO') and es_admin %}
+      <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#mCancelar"><i class="bi bi-x-circle"></i> Cancelar</button>
+    {% endif %}
+  </div>
+</div>
+
+{% if gasto.estatus == 'PENDIENTE' %}
+  <div class="alert alert-warning py-2 small">Este gasto debe aprobarse antes de poder generar un pago.{% if not es_admin %} La aprobación la hace un usuario admin.{% endif %}</div>
+{% elif gasto.estatus == 'CANCELADO' %}
+  <div class="alert alert-secondary py-2 small">Cancelado el {{ gasto.cancelado_en }}. Motivo: {{ gasto.motivo_cancelacion }}. Un gasto cancelado no se puede reactivar.</div>
+{% elif gasto.estatus in ('APROBADO','PAGO_PARCIAL') and pendiente <= 0 %}
+  <div class="alert alert-info py-2 small">Ya hay pagos generados por el total del gasto. Para generar otro hay que cancelar alguno que no se haya efectuado.</div>
+{% endif %}
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-5"><div class="card h-100"><div class="card-body">
+    <dl class="row mb-0 small">
+      <dt class="col-5">Proveedor</dt><dd class="col-7">{{ gasto.proveedor }}</dd>
+      <dt class="col-5">Categoría</dt><dd class="col-7">{{ gasto.categoria }}</dd>
+      <dt class="col-5">Fecha</dt><dd class="col-7">{{ gasto.fecha_gasto }}</dd>
+      <dt class="col-5">Vencimiento</dt><dd class="col-7">{{ gasto.fecha_vencimiento or '-' }}</dd>
+      <dt class="col-5">Registrado</dt><dd class="col-7">{{ gasto.creado_en }}</dd>
+      <dt class="col-5">Aprobado</dt><dd class="col-7">{{ gasto.aprobado_en or '-' }}</dd>
+    </dl>
+  </div></div></div>
+  <div class="col-lg-7"><div class="card h-100"><div class="card-body">
+    <div class="row text-center kpi">
+      <div class="col"><div class="etiqueta">Monto</div><div class="valor">{{ gasto.monto_cents|dinero }}</div></div>
+      <div class="col"><div class="etiqueta">Pagado</div><div class="valor text-success">{{ pagado|dinero }}</div></div>
+      <div class="col"><div class="etiqueta">En pagos sin efectuar</div><div class="valor">{{ (comprometido - pagado)|dinero }}</div></div>
+      <div class="col"><div class="etiqueta">Disponible p/ pagar</div><div class="valor">{{ ([pendiente, 0]|max)|dinero }}</div></div>
+    </div>
+    {% set pct = (pagado / gasto.monto_cents * 100) if gasto.monto_cents else 0 %}
+    <div class="progress mt-3" style="height: 8px"><div class="progress-bar bg-success" style="width: {{ pct }}%"></div></div>
+    <div class="small text-muted mt-1">{{ '%.0f'|format(pct) }}% pagado</div>
+  </div></div></div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-8"><div class="card"><div class="card-body">
+    <h6 class="text-muted">Pagos de este gasto</h6>
+    <div class="table-responsive"><table class="table table-sm table-hover mb-0">
+      <thead><tr><th>Folio</th><th>Cuenta</th><th>Creado</th><th class="num">Monto</th><th>Estatus</th></tr></thead>
+      <tbody>
+      {% for p in pagos %}
+        <tr onclick="location='{{ url_for('main.pago_detalle', pago_id=p.id) }}'" style="cursor:pointer">
+          <td>{{ p.folio }}</td><td>{{ p.cuenta }} ({{ p.banco }})</td><td>{{ p.creado_en }}</td>
+          <td class="num">{{ p.monto_cents|dinero }}</td><td>{{ badge(p.estatus) }}</td></tr>
+      {% else %}<tr><td colspan="5" class="text-muted">Sin pagos todavía.</td></tr>{% endfor %}
+      </tbody></table></div>
+  </div></div></div>
+  <div class="col-lg-4"><div class="card"><div class="card-body">
+    <h6 class="text-muted">Historial</h6>
+    <ul class="timeline small mb-0">
+    {% for h in historial %}
+      <li><div class="fw-semibold">{{ (h.estatus_anterior ~ ' → ') if h.estatus_anterior }}{{ h.estatus_nuevo }}</div>
+        <div class="text-muted">{{ h.creado_en }} · {{ h.usuario }}</div>
+        {% if h.comentario %}<div>{{ h.comentario }}</div>{% endif %}</li>
+    {% endfor %}
+    </ul>
+  </div></div></div>
+</div>
+
+{{ modal_cancelar('mCancelar', url_for('main.gasto_cancelar', gasto_id=gasto.id), 'Cancelar gasto ' ~ gasto.folio) }}
+
+<div class="modal fade" id="mPago" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <form method="post" action="{{ url_for('main.gasto_generar_pago', gasto_id=gasto.id) }}" id="fPago">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <input type="hidden" name="token" value="{{ token }}">
+      <div class="modal-header"><h5 class="modal-title">Generar pago para {{ gasto.folio }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <label class="form-label">Cuenta de cargo</label>
+        <select name="cuenta_id" class="form-select mb-3" required>
+          {% for c in cuentas %}<option value="{{ c.id }}">{{ c.nombre }} · {{ c.banco }} ({{ c.saldo_cents|dinero }})</option>{% endfor %}
+        </select>
+        <label class="form-label">Monto</label>
+        <input name="monto" type="number" step="0.01" min="0.01" max="{{ pendiente / 100 }}" value="{{ '%.2f'|format(pendiente / 100) }}" class="form-control" required>
+        <div class="form-text mb-3">Máximo {{ pendiente|dinero }}. Puedes capturar un monto menor para un pago parcial.</div>
+        <label class="form-label">Referencia (opcional)</label>
+        <input name="referencia" class="form-control" placeholder="Ej. transferencia SPEI">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cerrar</button>
+        <button class="btn btn-marca" id="btnPago">Generar pago</button>
+      </div>
+    </form>
+  </div></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+// evita doble envío desde el navegador; el token en servidor cubre el resto
+document.getElementById('fPago')?.addEventListener('submit', () => { const b = document.getElementById('btnPago'); b.disabled = true; b.textContent = 'Generando...'; });
+</script>
+{% endblock %}

@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badge with context %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="mb-0">Dashboard</h3>
+  <a href="{{ url_for('main.gasto_nuevo') }}" class="btn btn-marca"><i class="bi bi-plus-lg"></i> Nuevo gasto</a>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-xl"><div class="card kpi h-100"><div class="card-body">
+    <div class="etiqueta">Saldo en cuentas</div><div class="valor">{{ kpi.saldo|dinero }}</div></div></div></div>
+  <div class="col-6 col-xl"><div class="card kpi h-100"><div class="card-body">
+    <div class="etiqueta">Por pagar (aprobado)</div><div class="valor">{{ kpi.por_pagar|dinero }}</div></div></div></div>
+  <div class="col-6 col-xl"><div class="card kpi h-100"><div class="card-body">
+    <div class="etiqueta">Gastos por aprobar</div><div class="valor">{{ kpi.por_aprobar.n }}</div>
+    <div class="small text-muted">{{ kpi.por_aprobar.s|dinero }}</div></div></div></div>
+  <div class="col-6 col-xl"><div class="card kpi h-100"><div class="card-body">
+    <div class="etiqueta">Pagos por efectuar</div><div class="valor">{{ kpi.pagos_por_efectuar.n }}</div>
+    <div class="small text-muted">{{ kpi.pagos_por_efectuar.s|dinero }}</div></div></div></div>
+  <div class="col-6 col-xl"><div class="card kpi h-100"><div class="card-body">
+    <div class="etiqueta">Pagado este mes</div><div class="valor">{{ kpi.pagado_mes|dinero }}</div></div></div></div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-8"><div class="card h-100"><div class="card-body">
+    <h6 class="text-muted">Gastos registrados por mes</h6><canvas id="gMeses" height="110"></canvas></div></div></div>
+  <div class="col-lg-4"><div class="card h-100"><div class="card-body">
+    <h6 class="text-muted">Gastos por estatus</h6><canvas id="gEstatus" height="200"></canvas></div></div></div>
+</div>
+<div class="row g-3 mb-3">
+  <div class="col-lg-6"><div class="card h-100"><div class="card-body">
+    <h6 class="text-muted">Gasto por categoría (sin cancelados)</h6><canvas id="gCategorias" height="150"></canvas></div></div></div>
+  <div class="col-lg-6"><div class="card h-100"><div class="card-body">
+    <h6 class="text-muted">Saldo por cuenta</h6><canvas id="gCuentas" height="150"></canvas></div></div></div>
+</div>
+
+<div class="row g-3">
+  <div class="col-xl-7"><div class="card"><div class="card-body">
+    <h6 class="text-muted">Gastos aprobados con saldo pendiente</h6>
+    <div class="table-responsive"><table class="table table-sm table-hover mb-0">
+      <thead><tr><th>Folio</th><th>Proveedor</th><th>Vence</th><th class="num">Pendiente</th><th>Estatus</th></tr></thead>
+      <tbody>
+      {% for g_ in abiertos %}
+        <tr onclick="location='{{ url_for('main.gasto_detalle', gasto_id=g_.id) }}'" style="cursor:pointer">
+          <td>{{ g_.folio }}</td><td>{{ g_.proveedor }}</td>
+          <td class="{{ 'text-danger fw-semibold' if g_.fecha_vencimiento and g_.fecha_vencimiento < hoy }}">{{ g_.fecha_vencimiento or '-' }}</td>
+          <td class="num">{{ (g_.monto_cents - g_.pagado_cents)|dinero }}</td><td>{{ badge(g_.estatus) }}</td></tr>
+      {% else %}<tr><td colspan="5" class="text-muted">No hay gastos por pagar.</td></tr>{% endfor %}
+      </tbody></table></div></div></div></div>
+  <div class="col-xl-5"><div class="card"><div class="card-body">
+    <h6 class="text-muted">Últimos pagos</h6>
+    <div class="table-responsive"><table class="table table-sm table-hover mb-0">
+      <thead><tr><th>Folio</th><th>Gasto</th><th class="num">Monto</th><th>Estatus</th></tr></thead>
+      <tbody>
+      {% for p in ultimos_pagos %}
+        <tr onclick="location='{{ url_for('main.pago_detalle', pago_id=p.id) }}'" style="cursor:pointer">
+          <td>{{ p.folio }}</td><td>{{ p.gasto_folio }}</td><td class="num">{{ p.monto_cents|dinero }}</td><td>{{ badge(p.estatus) }}</td></tr>
+      {% endfor %}
+      </tbody></table></div></div></div></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const G = {{ graf|tojson }};
+const azul = '#24305e', azul2 = '#3477b2', gris = '#9aa5b8';
+const fmt = v => '$' + Number(v).toLocaleString('es-MX', {maximumFractionDigits: 0});
+Chart.defaults.font.family = 'system-ui, sans-serif';
+
+new Chart(gMeses, {type: 'bar', data: {labels: G.meses.map(m => m.mes), datasets: [
+  {label: 'Registrado', data: G.meses.map(m => m.registrado), backgroundColor: gris},
+  {label: 'Con pago efectuado', data: G.meses.map(m => m.con_pago), backgroundColor: azul}]},
+  options: {scales: {y: {ticks: {callback: fmt}}}, plugins: {tooltip: {callbacks: {label: c => c.dataset.label + ': ' + fmt(c.raw)}}}}});
+
+new Chart(gEstatus, {type: 'doughnut', data: {labels: G.estatus.labels.map(s => s.replace('_', ' ')),
+  datasets: [{data: G.estatus.data, backgroundColor: ['#f0ad4e', azul2, '#5bc0de', '#2e8b57', '#adb5bd']}]},
+  options: {plugins: {legend: {position: 'bottom'}}}});
+
+new Chart(gCategorias, {type: 'bar', data: {labels: G.categorias.map(c => c.label),
+  datasets: [{data: G.categorias.map(c => c.valor), backgroundColor: azul2}]},
+  options: {indexAxis: 'y', plugins: {legend: {display: false}, tooltip: {callbacks: {label: c => fmt(c.raw)}}},
+            scales: {x: {ticks: {callback: fmt}}}}});
+
+new Chart(gCuentas, {type: 'bar', data: {labels: G.cuentas.map(c => c.label),
+  datasets: [{data: G.cuentas.map(c => c.valor), backgroundColor: azul}]},
+  options: {plugins: {legend: {display: false}, tooltip: {callbacks: {label: c => fmt(c.raw)}}},
+            scales: {y: {ticks: {callback: fmt}}}}});
+</script>
+{% endblock %}

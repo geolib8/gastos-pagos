@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}{{ cuenta.nombre }}{% endblock %}
+{% block content %}
+<a href="{{ url_for('main.cuentas') }}" class="small text-decoration-none">&larr; Cuentas</a>
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+  <h3 class="mb-0">{{ cuenta.nombre }} <span class="text-muted fs-6">{{ cuenta.banco }} · ****{{ cuenta.numero[-4:] }}</span></h3>
+  <div class="kpi text-end"><div class="etiqueta">Saldo</div><div class="valor">{{ cuenta.saldo_cents|dinero }}</div></div>
+</div>
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card mb-3"><div class="card-body"><h6 class="text-muted">Evolución del saldo</h6><canvas id="gSaldo" height="90"></canvas></div></div>
+    <div class="card"><div class="card-body">
+      <h6 class="text-muted">Movimientos</h6>
+      <div class="table-responsive"><table class="table table-sm table-hover mb-0">
+        <thead><tr><th>Fecha</th><th>Tipo</th><th>Descripción</th><th>Usuario</th><th class="num">Monto</th><th class="num">Saldo</th></tr></thead>
+        <tbody>
+        {% for m in movimientos %}
+          <tr><td>{{ m.creado_en }}</td>
+            <td><span class="badge bg-{{ 'success' if m.tipo == 'DEPOSITO' else 'danger' }}">{{ m.tipo }}</span></td>
+            <td>{% if m.pago_id %}<a href="{{ url_for('main.pago_detalle', pago_id=m.pago_id) }}">{{ m.descripcion }}</a>{% else %}{{ m.descripcion }}{% endif %}</td>
+            <td>{{ m.usuario }}</td>
+            <td class="num {{ 'text-danger' if m.tipo == 'PAGO' else 'text-success' }}">{{ '-' if m.tipo == 'PAGO' else '+' }}{{ m.monto_cents|dinero }}</td>
+            <td class="num">{{ m.saldo_despues_cents|dinero }}</td></tr>
+        {% else %}<tr><td colspan="6" class="text-muted">Sin movimientos.</td></tr>{% endfor %}
+        </tbody></table></div>
+    </div></div>
+  </div>
+  {% if g.usuario.rol == 'admin' %}
+  <div class="col-lg-4"><div class="card"><div class="card-body">
+    <h6>Registrar depósito</h6>
+    <form method="post" action="{{ url_for('main.cuenta_depositar', cuenta_id=cuenta.id) }}">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <input name="monto" type="number" step="0.01" min="0.01" class="form-control form-control-sm mb-2" placeholder="Monto" required>
+      <input name="descripcion" class="form-control form-control-sm mb-3" placeholder="Concepto (opcional)">
+      <button class="btn btn-sm btn-marca">Depositar</button>
+    </form>
+  </div></div></div>
+  {% endif %}
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const S = {{ serie|tojson }};
+new Chart(gSaldo, {type: 'line', data: {labels: S.map(s => s.fecha), datasets: [{data: S.map(s => s.saldo),
+  borderColor: '#24305e', backgroundColor: 'rgba(52,119,178,.12)', fill: true, tension: .2, pointRadius: 2}]},
+  options: {plugins: {legend: {display: false}}, scales: {y: {ticks: {callback: v => '$' + v.toLocaleString('es-MX')}}}}});
+</script>
+{% endblock %}
